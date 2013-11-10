@@ -4,13 +4,13 @@ package base
 // MapData has key and value.
 type MapData struct {
 	Key   []byte
-	Value []byte
+	Value interface{}
 }
 
 // ReduceData has key and multiple values.
 type ReduceData struct {
 	Key    []byte
-	Values [][]byte
+	Values []interface{}
 }
 
 // Mapper function takes a single input with key and value, and emits

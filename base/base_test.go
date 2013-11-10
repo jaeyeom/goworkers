@@ -7,7 +7,7 @@ import (
 func ExampleSequentialMapWorker() {
 	w := SequentialMapWorker(func(input *MapData, outputs chan *MapData) {
 		defer close(outputs)
-		input.Value = append(input.Value, 't')
+		input.Value = append(input.Value.([]byte), 't')
 		outputs <- input
 	})
 	ins, outs := make(chan *MapData), make(chan *MapData)
@@ -18,7 +18,7 @@ func ExampleSequentialMapWorker() {
 		ins <- &MapData{Key: []byte{}, Value: []byte("las")}
 	}()
 	for out := range outs {
-		fmt.Println(string(out.Value))
+		fmt.Println(string(out.Value.([]byte)))
 	}
 	// Output:
 	// test
@@ -29,22 +29,22 @@ func ExampleChainMapWorkers() {
 	w := ChainMapWorkers([]MapWorker{
 		SequentialMapWorker(func(input *MapData, outputs chan *MapData) {
 			defer close(outputs)
-			input.Value = append(input.Value, 't')
+			input.Value = append(input.Value.([]byte), 't')
 			outputs <- input
 		}),
 		SequentialMapWorker(func(input *MapData, outputs chan *MapData) {
 			defer close(outputs)
-			input.Value = append(input.Value, 'e')
+			input.Value = append(input.Value.([]byte), 'e')
 			outputs <- input
 		}),
 		SequentialMapWorker(func(input *MapData, outputs chan *MapData) {
 			defer close(outputs)
-			input.Value = append(input.Value, 's')
+			input.Value = append(input.Value.([]byte), 's')
 			outputs <- input
 		}),
 		SequentialMapWorker(func(input *MapData, outputs chan *MapData) {
 			defer close(outputs)
-			input.Value = append(input.Value, 't')
+			input.Value = append(input.Value.([]byte), 't')
 			outputs <- input
 		}),
 	})
@@ -56,7 +56,7 @@ func ExampleChainMapWorkers() {
 		ins <- &MapData{Key: []byte{}, Value: []byte("2")}
 	}()
 	for out := range outs {
-		fmt.Println(string(out.Value))
+		fmt.Println(string(out.Value.([]byte)))
 	}
 	// Output:
 	// test
