@@ -52,14 +52,25 @@ func SequentialMapWorker(mapper Mapper) MapWorker {
 // ChainMapWorkers chains multiple map workers sequentially.
 func ChainMapWorkers(mapWorkers []MapWorker) MapWorker {
 	return func(inputs <-chan *MapData, outputs chan<- *MapData) {
-		var in chan *MapData
-		out := make(chan *MapData)
-		go SequentialMapWorker(IdentityMapper)(inputs, out)
-		for _, mapWorker := range mapWorkers {
-			in, out = out, make(chan *MapData)
-			go mapWorker(in, out)
+		if len(mapWorkers) == 0 {
+			go SequentialMapWorker(IdentityMapper)(inputs, outputs)
+			return
 		}
-		SequentialMapWorker(IdentityMapper)(out, outputs)
+		if len(mapWorkers) == 1 {
+			go mapWorkers[0](inputs, outputs)
+			return
+		}
+		channels := make([]chan *MapData, len(mapWorkers)-1)
+		channels[0] = make(chan *MapData)
+		go mapWorkers[0](inputs, channels[0])
+		for i := 1; i < len(mapWorkers)-1; i++ {
+			channels[i] = make(chan *MapData)
+			go mapWorkers[i](channels[i-1], channels[i])
+		}
+		go mapWorkers[len(mapWorkers)-1](
+			channels[len(mapWorkers)-2],
+			outputs,
+		)
 	}
 }
 
