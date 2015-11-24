@@ -2,12 +2,13 @@ package base
 
 import (
 	"fmt"
+
+	"golang.org/x/net/context"
 )
 
 func ExampleSequentialMapWorker() {
-	done := make(chan struct{})
-	defer close(done)
-	p := func(done <-chan struct{}, outputs chan<- *MapData) {
+	ctx := context.Background()
+	p := func(ctx context.Context, outputs chan<- *MapData) {
 		defer close(outputs)
 		data := []*MapData{
 			&MapData{Key: []byte{}, Value: []byte("tes")},
@@ -16,7 +17,7 @@ func ExampleSequentialMapWorker() {
 		for _, datum := range data {
 			select {
 			case outputs <- datum:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -31,16 +32,15 @@ func ExampleSequentialMapWorker() {
 			fmt.Println(string(input.Value.([]byte)))
 		}
 	}
-	consume(Work(w, done, Produce(p, done)))
+	consume(Work(ctx, w, Produce(ctx, p)))
 	// Output:
 	// test
 	// last
 }
 
 func ExampleChainMapWorkers_normal() {
-	done := make(chan struct{})
-	defer close(done)
-	p := func(done <-chan struct{}, outputs chan<- *MapData) {
+	ctx := context.Background()
+	p := func(ctx context.Context, outputs chan<- *MapData) {
 		defer close(outputs)
 		data := []*MapData{
 			&MapData{Key: []byte{}, Value: []byte{}},
@@ -49,7 +49,7 @@ func ExampleChainMapWorkers_normal() {
 		for _, datum := range data {
 			select {
 			case outputs <- datum:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -81,16 +81,15 @@ func ExampleChainMapWorkers_normal() {
 			fmt.Println(string(input.Value.([]byte)))
 		}
 	}
-	consume(Work(w, done, Produce(p, done)))
+	consume(Work(ctx, w, Produce(ctx, p)))
 	// Output:
 	// test
 	// 2test
 }
 
 func ExampleChainMapWorkers_one() {
-	done := make(chan struct{})
-	defer close(done)
-	p := func(done <-chan struct{}, outputs chan<- *MapData) {
+	ctx := context.Background()
+	p := func(ctx context.Context, outputs chan<- *MapData) {
 		defer close(outputs)
 		data := []*MapData{
 			&MapData{Key: []byte{}, Value: []byte{}},
@@ -99,7 +98,7 @@ func ExampleChainMapWorkers_one() {
 		for _, datum := range data {
 			select {
 			case outputs <- datum:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -116,16 +115,15 @@ func ExampleChainMapWorkers_one() {
 			fmt.Println(string(input.Value.([]byte)))
 		}
 	}
-	consume(Work(w, done, Produce(p, done)))
+	consume(Work(ctx, w, Produce(ctx, p)))
 	// Output:
 	// t
 	// 2t
 }
 
 func ExampleChainMapWorkers_two() {
-	done := make(chan struct{})
-	defer close(done)
-	p := func(done <-chan struct{}, outputs chan<- *MapData) {
+	ctx := context.Background()
+	p := func(ctx context.Context, outputs chan<- *MapData) {
 		defer close(outputs)
 		data := []*MapData{
 			&MapData{Key: []byte{}, Value: []byte{}},
@@ -134,7 +132,7 @@ func ExampleChainMapWorkers_two() {
 		for _, datum := range data {
 			select {
 			case outputs <- datum:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -156,15 +154,15 @@ func ExampleChainMapWorkers_two() {
 			fmt.Println(string(input.Value.([]byte)))
 		}
 	}
-	consume(Work(w, done, Produce(p, done)))
+	consume(Work(ctx, w, Produce(ctx, p)))
 	// Output:
 	// te
 	// 2te
 }
 
 func ExampleChainMapWorkers_done() {
-	done := make(chan struct{})
-	p := func(done <-chan struct{}, outputs chan<- *MapData) {
+	ctx, cancel := context.WithCancel(context.Background())
+	p := func(ctx context.Context, outputs chan<- *MapData) {
 		defer close(outputs)
 		data := []*MapData{
 			&MapData{Key: []byte{}, Value: []byte{}},
@@ -173,7 +171,7 @@ func ExampleChainMapWorkers_done() {
 		for _, datum := range data {
 			select {
 			case outputs <- datum:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -193,11 +191,11 @@ func ExampleChainMapWorkers_done() {
 	consume := func(inputs <-chan *MapData) {
 		for input := range inputs {
 			fmt.Println(string(input.Value.([]byte)))
-			close(done)
+			cancel()
 			break
 		}
 	}
-	consume(Work(w, done, Produce(p, done)))
+	consume(Work(ctx, w, Produce(ctx, p)))
 	// Output:
 	// te
 }
