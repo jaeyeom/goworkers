@@ -6,13 +6,22 @@ import (
 	"golang.org/x/net/context"
 )
 
+type mapData struct {
+	KeyBytes []byte
+	Value    []byte
+}
+
+func (m mapData) Key() []byte {
+	return m.KeyBytes
+}
+
 func ExampleSequentialMapWorker() {
 	ctx := context.Background()
-	p := func(ctx context.Context, outputs chan<- *MapData) {
+	p := func(ctx context.Context, outputs chan<- Keyer) {
 		defer close(outputs)
-		data := []*MapData{
-			&MapData{Key: []byte{}, Value: []byte("tes")},
-			&MapData{Key: []byte{}, Value: []byte("las")},
+		data := []Keyer{
+			&mapData{KeyBytes: []byte{}, Value: []byte("tes")},
+			&mapData{KeyBytes: []byte{}, Value: []byte("las")},
 		}
 		for _, datum := range data {
 			select {
@@ -22,14 +31,14 @@ func ExampleSequentialMapWorker() {
 			}
 		}
 	}
-	w := SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+	w := SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 		defer close(outputs)
-		input.Value = append(input.Value.([]byte), 't')
+		input.(*mapData).Value = append(input.(*mapData).Value, 't')
 		outputs <- input
 	})
-	consume := func(inputs <-chan *MapData) {
+	consume := func(inputs <-chan Keyer) {
 		for input := range inputs {
-			fmt.Println(string(input.Value.([]byte)))
+			fmt.Println(string(input.(*mapData).Value))
 		}
 	}
 	consume(Work(ctx, w, Produce(ctx, p)))
@@ -40,11 +49,11 @@ func ExampleSequentialMapWorker() {
 
 func ExampleChainMapWorkers_normal() {
 	ctx := context.Background()
-	p := func(ctx context.Context, outputs chan<- *MapData) {
+	p := func(ctx context.Context, outputs chan<- Keyer) {
 		defer close(outputs)
-		data := []*MapData{
-			&MapData{Key: []byte{}, Value: []byte{}},
-			&MapData{Key: []byte{}, Value: []byte("2")},
+		data := []Keyer{
+			&mapData{KeyBytes: []byte{}, Value: []byte{}},
+			&mapData{KeyBytes: []byte{}, Value: []byte("2")},
 		}
 		for _, datum := range data {
 			select {
@@ -55,30 +64,30 @@ func ExampleChainMapWorkers_normal() {
 		}
 	}
 	w := ChainMapWorkers([]MapWorker{
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 't')
+			input.(*mapData).Value = append(input.(*mapData).Value, 't')
 			outputs <- input
 		}),
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 'e')
+			input.(*mapData).Value = append(input.(*mapData).Value, 'e')
 			outputs <- input
 		}),
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 's')
+			input.(*mapData).Value = append(input.(*mapData).Value, 's')
 			outputs <- input
 		}),
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 't')
+			input.(*mapData).Value = append(input.(*mapData).Value, 't')
 			outputs <- input
 		}),
 	})
-	consume := func(inputs <-chan *MapData) {
+	consume := func(inputs <-chan Keyer) {
 		for input := range inputs {
-			fmt.Println(string(input.Value.([]byte)))
+			fmt.Println(string(input.(*mapData).Value))
 		}
 	}
 	consume(Work(ctx, w, Produce(ctx, p)))
@@ -89,11 +98,11 @@ func ExampleChainMapWorkers_normal() {
 
 func ExampleChainMapWorkers_one() {
 	ctx := context.Background()
-	p := func(ctx context.Context, outputs chan<- *MapData) {
+	p := func(ctx context.Context, outputs chan<- Keyer) {
 		defer close(outputs)
-		data := []*MapData{
-			&MapData{Key: []byte{}, Value: []byte{}},
-			&MapData{Key: []byte{}, Value: []byte("2")},
+		data := []Keyer{
+			&mapData{KeyBytes: []byte{}, Value: []byte{}},
+			&mapData{KeyBytes: []byte{}, Value: []byte("2")},
 		}
 		for _, datum := range data {
 			select {
@@ -104,15 +113,15 @@ func ExampleChainMapWorkers_one() {
 		}
 	}
 	w := ChainMapWorkers([]MapWorker{
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 't')
+			input.(*mapData).Value = append(input.(*mapData).Value, 't')
 			outputs <- input
 		}),
 	})
-	consume := func(inputs <-chan *MapData) {
+	consume := func(inputs <-chan Keyer) {
 		for input := range inputs {
-			fmt.Println(string(input.Value.([]byte)))
+			fmt.Println(string(input.(*mapData).Value))
 		}
 	}
 	consume(Work(ctx, w, Produce(ctx, p)))
@@ -123,11 +132,11 @@ func ExampleChainMapWorkers_one() {
 
 func ExampleChainMapWorkers_two() {
 	ctx := context.Background()
-	p := func(ctx context.Context, outputs chan<- *MapData) {
+	p := func(ctx context.Context, outputs chan<- Keyer) {
 		defer close(outputs)
-		data := []*MapData{
-			&MapData{Key: []byte{}, Value: []byte{}},
-			&MapData{Key: []byte{}, Value: []byte("2")},
+		data := []Keyer{
+			&mapData{KeyBytes: []byte{}, Value: []byte{}},
+			&mapData{KeyBytes: []byte{}, Value: []byte("2")},
 		}
 		for _, datum := range data {
 			select {
@@ -138,20 +147,20 @@ func ExampleChainMapWorkers_two() {
 		}
 	}
 	w := ChainMapWorkers([]MapWorker{
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 't')
+			input.(*mapData).Value = append(input.(*mapData).Value, 't')
 			outputs <- input
 		}),
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 'e')
+			input.(*mapData).Value = append(input.(*mapData).Value, 'e')
 			outputs <- input
 		}),
 	})
-	consume := func(inputs <-chan *MapData) {
+	consume := func(inputs <-chan Keyer) {
 		for input := range inputs {
-			fmt.Println(string(input.Value.([]byte)))
+			fmt.Println(string(input.(*mapData).Value))
 		}
 	}
 	consume(Work(ctx, w, Produce(ctx, p)))
@@ -162,11 +171,11 @@ func ExampleChainMapWorkers_two() {
 
 func ExampleChainMapWorkers_done() {
 	ctx, cancel := context.WithCancel(context.Background())
-	p := func(ctx context.Context, outputs chan<- *MapData) {
+	p := func(ctx context.Context, outputs chan<- Keyer) {
 		defer close(outputs)
-		data := []*MapData{
-			&MapData{Key: []byte{}, Value: []byte{}},
-			&MapData{Key: []byte{}, Value: []byte("2")},
+		data := []Keyer{
+			&mapData{KeyBytes: []byte{}, Value: []byte{}},
+			&mapData{KeyBytes: []byte{}, Value: []byte("2")},
 		}
 		for _, datum := range data {
 			select {
@@ -177,20 +186,20 @@ func ExampleChainMapWorkers_done() {
 		}
 	}
 	w := ChainMapWorkers([]MapWorker{
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 't')
+			input.(*mapData).Value = append(input.(*mapData).Value, 't')
 			outputs <- input
 		}),
-		SequentialMapWorker(func(input *MapData, outputs chan<- *MapData) {
+		SequentialMapWorker(func(input Keyer, outputs chan<- Keyer) {
 			defer close(outputs)
-			input.Value = append(input.Value.([]byte), 'e')
+			input.(*mapData).Value = append(input.(*mapData).Value, 'e')
 			outputs <- input
 		}),
 	})
-	consume := func(inputs <-chan *MapData) {
+	consume := func(inputs <-chan Keyer) {
 		for input := range inputs {
-			fmt.Println(string(input.Value.([]byte)))
+			fmt.Println(string(input.(*mapData).Value))
 			cancel()
 			break
 		}
